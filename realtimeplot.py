@@ -2,12 +2,12 @@
 import pylab as plt
 import numpy as np
 import argparse
-from queue import Queue
+import queue
 import socket
 from threading import Thread
 
 
-def plot(queue):
+def plot(queu):
     """Plot data from a queue"""
     # Enable Matplotlib interactive mode
     plt.ion()
@@ -15,7 +15,7 @@ def plot(queue):
     graph = axes.plot([], [])[0]
     while True:
         # Plot 8 * 64 time steps at a time
-        buf = np.concatenate([queue.get() for _ in range(8)])
+        buf = np.concatenate([queu.get() for _ in range(8)])
         # Update the X and Y data
         graph.set_data(buf.reshape(-1, 2).T)
         # Rescale the plotting area to match the data
@@ -38,7 +38,7 @@ def recvall(sock, n):
     return data
 
 
-def receive_and_queue(sock, output_file, queue):
+def receive_and_queue(sock, output_file, queu):
     """Receive data from a socket, save them to a file and push them to a queue"""
     while True:
         # Read 64 time steps at a time
@@ -46,7 +46,12 @@ def receive_and_queue(sock, output_file, queue):
         data = np.frombuffer(d)
         if output_file:
             data.tofile(output_file)
-        queue.put(data)
+        try:
+            queu.put(data, block=False)
+        except queue.Full:
+            # The main thread (i.e Matplotlib) is not popping the queue fast enough.
+            # Not an issue, we just drop some time steps.
+            pass
 
 
 def client(args):
@@ -58,12 +63,12 @@ def client(args):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # A queue to send data from the receiving thread to Matplotlib (which must
         # be in the main thread)
-        queue = Queue()
+        queu = queue.Queue()
         s.connect((args.host, args.port))
         print("Connected to server")
-        thread = Thread(target=receive_and_queue, args=[s, ofile, queue])
+        thread = Thread(target=receive_and_queue, args=[s, ofile, queu])
         thread.start()
-        plot(queue)
+        plot(queu)
 
 
 def serve_sin_wave(
