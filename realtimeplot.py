@@ -60,7 +60,7 @@ def client(args):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # A queue to send data from the receiving thread to Matplotlib (which must
         # be in the main thread)
-        queu = queue.Queue()
+        queu = queue.Queue(maxsize=16)
         s.connect((args.host, args.port))
         print("Connected to server")
         thread = Thread(target=receive_and_queue, args=[s, ofile, queu])
