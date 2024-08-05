@@ -7,7 +7,7 @@ import socket
 from threading import Thread
 
 
-def plot(queu):
+def plot(queu: queue.Queue):
     """Plot data from a queue"""
     # Enable Matplotlib interactive mode
     plt.ion()
@@ -27,18 +27,15 @@ def plot(queu):
 
 
 # https://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data
-def recvall(sock, n):
+def recvall(sock, n) -> bytearray:
     """Helper function to recv n bytes or return None if EOF is hit"""
     data = bytearray()
     while len(data) < n:
-        packet = sock.recv(n - len(data))
-        if not packet:
-            return None
-        data.extend(packet)
+        data.extend(sock.recv(n - len(data)))
     return data
 
 
-def receive_and_queue(sock, output_file, queu):
+def receive_and_queue(sock: socket.socket, output_file, queu):
     """Receive data from a socket, save them to a file and push them to a queue"""
     while True:
         # Read 64 time steps at a time
@@ -72,7 +69,11 @@ def client(args):
 
 
 def serve_sin_wave(
-    conn, addr, frequency=1.0, amplitude=1.0, sample_rate=100, duration=5
+    conn,
+    addr,
+    frequency: float = 1.0,
+    amplitude: float = 1.0,
+    sample_rate: int = 100,
 ):
     """Generate a sinusoidal signal and send it to a client"""
     t = np.linspace(0, 1.0, sample_rate, endpoint=False)
